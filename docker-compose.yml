@@ -1,0 +1,34 @@
+# Self-hosted Langfuse (v2: one container + Postgres). No usage ceiling while
+# iterating, which is exactly when you generate the most traces.
+services:
+  langfuse:
+    image: langfuse/langfuse:2
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://langfuse:${POSTGRES_PASSWORD:-langfuse}@db:5432/langfuse
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me}
+      SALT: ${SALT:-change-me-too}
+      TELEMETRY_ENABLED: "false"
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-langfuse}
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse"]
+      interval: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  langfuse-db:
