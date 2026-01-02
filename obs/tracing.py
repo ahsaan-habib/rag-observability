@@ -15,6 +15,8 @@ from langfuse import Langfuse
 from rag_grounded.answer.schemas import Result
 from rag_grounded.pipeline import RAGPipeline
 
+from .retriever import TracedHybridRetriever, last_retrieval
+
 _current = contextvars.ContextVar("langfuse_trace", default=None)
 
 RELEASE = os.environ.get("OBS_RELEASE", "dev")
@@ -31,6 +33,17 @@ class Tracer:
             return
         end = datetime.now(timezone.utc)
         start = end - timedelta(milliseconds=duration_ms)
+        payload = dict(payload)
+        if name == "retrieve":
+            payload.update(last_retrieval.get())
+        elif name == "rerank":
+            ranked = payload.get("ranked", [])
+            kept = [cid for cid, _ in ranked]
+            fused_top = last_retrieval.get().get("fused_top")
+            payload.update(kept=kept, scores=[s for _, s in ranked],
+                           # did rerank overrule retrieval's first choice?
+                           fused_top_kept=fused_top in kept,
+                           fused_top_rank=kept.index(fused_top) + 1 if fused_top in kept else None)
         if name == "generate":
             trace.generation(
                 name="generate", start_time=start, end_time=end,
@@ -61,4 +74,5 @@ class Tracer:
 
 
 def traced_pipeline(tracer: Tracer, **kw) -> RAGPipeline:
+    kw.setdefault("retriever", TracedHybridRetriever())
     return RAGPipeline(on_step=tracer.on_step, **kw)
