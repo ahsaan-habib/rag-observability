@@ -1,0 +1,10 @@
+# Cost per request. For local models there is no token bill, but the box isn't
+# free: compute_usd_per_hour is charged for the request's wall time (set it to
+# what the machine costs you — amortised hardware + power, or the hourly price
+# of the GPU instance it would run on). Token prices are per 1M tokens, for
+# when a hosted model is swapped in.
+compute_usd_per_hour: 0.35
+models:
+  qwen3:4b:
+    input_per_m: 0.0
+    output_per_m: 0.0
