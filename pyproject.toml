@@ -15,3 +15,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["obs*"]
+
+[project.scripts]
+obs = "obs.cli:main"

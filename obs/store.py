@@ -26,6 +26,14 @@ CREATE TABLE IF NOT EXISTS requests (
     release       TEXT
 );
 CREATE INDEX IF NOT EXISTS requests_ts ON requests(ts);
+
+-- without a marker on the chart, a step change names nothing
+CREATE TABLE IF NOT EXISTS deploys (
+    id      INTEGER PRIMARY KEY,
+    ts      REAL NOT NULL,
+    release TEXT NOT NULL,
+    note    TEXT
+);
 """
 
 
@@ -43,3 +51,12 @@ def record(conn: sqlite3.Connection, **row) -> None:
         cur.execute(f"INSERT INTO requests ({cols}) VALUES ({','.join('?' * len(row))})",
                     list(row.values()))
     conn.commit()
+
+
+def mark_deploy(conn: sqlite3.Connection, release: str, note: str = "") -> None:
+    conn.execute("INSERT INTO deploys (ts, release, note) VALUES (?, ?, ?)", (time.time(), release, note))
+    conn.commit()
+
+
+def deploys(conn: sqlite3.Connection, since: float = 0) -> list[dict]:
+    return [dict(r) for r in conn.execute("SELECT * FROM deploys WHERE ts >= ? ORDER BY ts", (since,))]
