@@ -7,6 +7,8 @@ dependencies = [
     "rag-grounded @ git+https://github.com/ahsaan-habib/rag-grounded.git",
     "langfuse>=2.50,<3",
     "pyyaml>=6.0",
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
 ]
 
 [build-system]
