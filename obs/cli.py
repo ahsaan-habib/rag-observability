@@ -19,6 +19,12 @@ def cmd_report(args) -> None:
     print(json.dumps(metrics.window(conn, time.time() - args.hours * 3600), indent=2))
 
 
+def cmd_alerts(args) -> None:
+    from .alerts import run
+
+    raise SystemExit(1 if run() else 0)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(prog="obs")
     sub = p.add_subparsers(required=True)
@@ -31,6 +37,9 @@ def main() -> None:
     r = sub.add_parser("report", help="metrics for the last N hours")
     r.add_argument("--hours", type=float, default=24)
     r.set_defaults(func=cmd_report)
+
+    a = sub.add_parser("alerts", help="check the last hour against the baseline, notify on breach")
+    a.set_defaults(func=cmd_alerts)
 
     args = p.parse_args()
     args.func(args)
