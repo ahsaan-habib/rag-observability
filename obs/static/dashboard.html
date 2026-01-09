@@ -1,0 +1,52 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>rag · quality over time</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 24px; color: #1d2433; background: #fafbfc; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.sub { color: #5b6476; margin: 0 0 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+  .card { background: #fff; border: 1px solid #e3e7ee; border-radius: 8px; padding: 12px 14px; }
+  .card h2 { font-size: 13px; font-weight: 600; margin: 0 0 8px; color: #3a4357; }
+</style>
+<h1>rag-grounded · last 14 days</h1>
+<p class="sub">Dashed verticals are deploys. No means anywhere.</p>
+<div class="grid">
+  <div class="card"><h2>Latency p50 / p95 / p99 (ms)</h2><canvas id="lat"></canvas></div>
+  <div class="card"><h2>Errors vs refusals (rate)</h2><canvas id="fail"></canvas></div>
+  <div class="card"><h2>Citation coverage</h2><canvas id="cite"></canvas></div>
+  <div class="card"><h2>Cost per request (USD, median)</h2><canvas id="cost"></canvas></div>
+</div>
+<script>
+const deployLines = (labels, deploys, days) => ({
+  id: "deploys",
+  afterDraw(chart) {
+    const { ctx, chartArea: a, scales: { x } } = chart;
+    ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = "#9aa3b5"; ctx.fillStyle = "#5b6476";
+    for (const d of deploys) {
+      const i = days.findIndex((day, k) => d.ts >= day.day_start && (k === days.length - 1 || d.ts < days[k + 1].day_start));
+      if (i < 0) continue;
+      const px = x.getPixelForValue(i);
+      ctx.beginPath(); ctx.moveTo(px, a.top); ctx.lineTo(px, a.bottom); ctx.stroke();
+      ctx.fillText(d.release, px + 3, a.top + 10);
+    }
+    ctx.restore();
+  },
+});
+
+fetch("/metrics/daily?days=14").then(r => r.json()).then(({ days, deploys }) => {
+  const labels = days.map(d => new Date(d.day_start * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+  const line = (id, sets, opts = {}) => new Chart(document.getElementById(id), {
+    type: "line",
+    data: { labels, datasets: sets.map(([label, key, color]) => ({
+      label, data: days.map(d => d[key] ?? null), borderColor: color, backgroundColor: color, spanGaps: true, tension: 0.2 })) },
+    options: { plugins: { legend: { position: "bottom" } }, scales: opts.scales || {} },
+    plugins: [deployLines(labels, deploys, days)],
+  });
+  line("lat", [["p50", "latency_p50_ms", "#2f6fde"], ["p95", "latency_p95_ms", "#d9822b"], ["p99", "latency_p99_ms", "#c23b4f"]]);
+  line("fail", [["errors", "error_rate", "#c23b4f"], ["refusals", "refusal_rate", "#6b7a99"]]);
+  line("cite", [["coverage", "citation_coverage", "#1f9d6b"]], { scales: { y: { min: 0, max: 1 } } });
+  line("cost", [["cost/request", "cost_per_request_usd", "#7a5af5"]]);
+});
+</script>

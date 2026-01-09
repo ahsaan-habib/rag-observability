@@ -6,8 +6,10 @@ from __future__ import annotations
 
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from . import metrics, store
@@ -47,3 +49,8 @@ def get_metrics(hours: float = 24) -> dict:
 def get_daily(days: int = 14) -> dict:
     db = state["tracer"].db
     return {"days": metrics.daily(db, days), "deploys": store.deploys(db, time.time() - days * 86400)}
+
+
+@app.get("/", response_class=HTMLResponse)
+def dashboard() -> str:
+    return (Path(__file__).parent / "static" / "dashboard.html").read_text()
