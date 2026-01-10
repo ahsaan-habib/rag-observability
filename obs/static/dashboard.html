@@ -17,6 +17,7 @@
   <div class="card"><h2>Errors vs refusals (rate)</h2><canvas id="fail"></canvas></div>
   <div class="card"><h2>Citation coverage</h2><canvas id="cite"></canvas></div>
   <div class="card"><h2>Cost per request (USD, median)</h2><canvas id="cost"></canvas></div>
+  <div class="card"><h2>Golden set (nightly): recall · precision · faithfulness · refusal</h2><canvas id="evals"></canvas></div>
 </div>
 <script>
 const deployLines = (labels, deploys, days) => ({
@@ -35,7 +36,7 @@ const deployLines = (labels, deploys, days) => ({
   },
 });
 
-fetch("/metrics/daily?days=14").then(r => r.json()).then(({ days, deploys }) => {
+fetch("/metrics/daily?days=14").then(r => r.json()).then(({ days, deploys, evals }) => {
   const labels = days.map(d => new Date(d.day_start * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
   const line = (id, sets, opts = {}) => new Chart(document.getElementById(id), {
     type: "line",
@@ -48,5 +49,15 @@ fetch("/metrics/daily?days=14").then(r => r.json()).then(({ days, deploys }) => 
   line("fail", [["errors", "error_rate", "#c23b4f"], ["refusals", "refusal_rate", "#6b7a99"]]);
   line("cite", [["coverage", "citation_coverage", "#1f9d6b"]], { scales: { y: { min: 0, max: 1 } } });
   line("cost", [["cost/request", "cost_per_request_usd", "#7a5af5"]]);
+  new Chart(document.getElementById("evals"), {
+    type: "line",
+    data: {
+      labels: evals.map(e => new Date(e.ts * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" })),
+      datasets: [["recall", "context_recall", "#2f6fde"], ["precision", "context_precision", "#6b7a99"],
+                 ["faithfulness", "faithfulness", "#1f9d6b"], ["refusal", "refusal_correctness", "#d9822b"]]
+        .map(([label, key, color]) => ({ label, data: evals.map(e => e[key]), borderColor: color, backgroundColor: color })),
+    },
+    options: { plugins: { legend: { position: "bottom" } }, scales: { y: { min: 0, max: 1 } } },
+  });
 });
 </script>

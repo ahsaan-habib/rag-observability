@@ -28,6 +28,18 @@ CREATE TABLE IF NOT EXISTS requests (
 );
 CREATE INDEX IF NOT EXISTS requests_ts ON requests(ts);
 
+-- quality needs labels, so it comes from scheduled golden-set runs (rag-eval-gate)
+CREATE TABLE IF NOT EXISTS eval_runs (
+    id                  INTEGER PRIMARY KEY,
+    ts                  REAL NOT NULL,
+    dataset_version     TEXT,
+    context_recall      REAL,
+    context_precision   REAL,
+    faithfulness        REAL,
+    refusal_correctness REAL,
+    release             TEXT
+);
+
 -- without a marker on the chart, a step change names nothing
 CREATE TABLE IF NOT EXISTS deploys (
     id      INTEGER PRIMARY KEY,
@@ -61,3 +73,18 @@ def mark_deploy(conn: sqlite3.Connection, release: str, note: str = "") -> None:
 
 def deploys(conn: sqlite3.Connection, since: float = 0) -> list[dict]:
     return [dict(r) for r in conn.execute("SELECT * FROM deploys WHERE ts >= ? ORDER BY ts", (since,))]
+
+
+def record_eval(conn: sqlite3.Connection, results: dict, release: str = "") -> None:
+    m = results["metrics"]
+    conn.execute(
+        "INSERT INTO eval_runs (ts, dataset_version, context_recall, context_precision, faithfulness,"
+        " refusal_correctness, release) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (time.time(), results.get("dataset_version"), m["context_recall"], m["context_precision"],
+         m["faithfulness"], m["refusal_correctness"], release),
+    )
+    conn.commit()
+
+
+def eval_runs(conn: sqlite3.Connection, since: float = 0) -> list[dict]:
+    return [dict(r) for r in conn.execute("SELECT * FROM eval_runs WHERE ts >= ? ORDER BY ts", (since,))]

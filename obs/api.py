@@ -48,7 +48,9 @@ def get_metrics(hours: float = 24) -> dict:
 @app.get("/metrics/daily")
 def get_daily(days: int = 14) -> dict:
     db = state["tracer"].db
-    return {"days": metrics.daily(db, days), "deploys": store.deploys(db, time.time() - days * 86400)}
+    since = time.time() - days * 86400
+    return {"days": metrics.daily(db, days), "deploys": store.deploys(db, since),
+            "evals": store.eval_runs(db, since)}
 
 
 @app.get("/", response_class=HTMLResponse)
