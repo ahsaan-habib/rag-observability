@@ -17,6 +17,7 @@ from rag_grounded.answer.schemas import Result
 from rag_grounded.pipeline import RAGPipeline
 
 from rag_grounded.answer.claims import cited_numbers, split_claims
+from rag_grounded.embed import fingerprint
 
 from . import store
 from .cost import request_cost
@@ -31,6 +32,10 @@ class Tracer:
     def __init__(self, client: Langfuse | None = None):
         self.lf = client or Langfuse(release=RELEASE)
         self.db = store.connect()
+        # Two embedding models give valid vectors of the same dimension, so a
+        # silent model change throws nothing. Put the fingerprint on every
+        # request so it at least shows up as a step at a deploy.
+        self.embed_fp = fingerprint()
 
     # rag-grounded hook
     def on_step(self, name: str, payload: dict, duration_ms: float) -> None:
@@ -63,11 +68,12 @@ class Tracer:
     def ask(self, pipe: RAGPipeline, query: str, user_id: str | None = None) -> Result:
         trace = self.lf.trace(name="rag.ask", input=query, user_id=user_id,
                               metadata={"model": pipe.llm.model,
-                                        "prompt": f"{pipe.prompt.id}@v{pipe.prompt.version}"})
+                                        "prompt": f"{pipe.prompt.id}@v{pipe.prompt.version}",
+                                        "embed_fp": self.embed_fp})
         token = _current.set(trace)
         t0 = time.perf_counter()
         base = {"trace_id": trace.id, "model": pipe.llm.model, "release": RELEASE,
-                "prompt": f"{pipe.prompt.id}@v{pipe.prompt.version}"}
+                "prompt": f"{pipe.prompt.id}@v{pipe.prompt.version}", "embed_fp": self.embed_fp}
         try:
             res = pipe.ask(query)
         except Exception as e:

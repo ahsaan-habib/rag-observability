@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS requests (
     fully_cited   INTEGER,                -- answers only: every claim carries [n]
     model         TEXT,
     prompt        TEXT,
-    release       TEXT
+    release       TEXT,
+    embed_fp      TEXT                    -- embedding model fingerprint at request time
 );
 CREATE INDEX IF NOT EXISTS requests_ts ON requests(ts);
 
