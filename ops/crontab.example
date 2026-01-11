@@ -1,3 +1,4 @@
+OBS_DB=/srv/rag-observability/obs.db
 # alerts every 5 minutes
 */5 * * * *  cd /srv/rag-observability && .venv/bin/obs alerts
 # nightly golden-set run against the live index, stored as a point on the quality chart
