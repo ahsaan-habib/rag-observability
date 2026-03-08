@@ -35,6 +35,13 @@ def cmd_eval_import(args) -> None:
     print(f"recorded eval run {results.get('dataset_version')}: {results['metrics']}")
 
 
+def cmd_weekly(args) -> None:
+    from . import store
+    from .alerts import weekly
+
+    print(weekly(store.connect()))
+
+
 def main() -> None:
     p = argparse.ArgumentParser(prog="obs")
     sub = p.add_subparsers(required=True)
@@ -54,6 +61,9 @@ def main() -> None:
 
     a = sub.add_parser("alerts", help="check the last hour against the baseline, notify on breach")
     a.set_defaults(func=cmd_alerts)
+
+    w = sub.add_parser("weekly", help="the review list: quality and refusal trends")
+    w.set_defaults(func=cmd_weekly)
 
     args = p.parse_args()
     args.func(args)

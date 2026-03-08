@@ -3,3 +3,5 @@ OBS_DB=/srv/rag-observability/obs.db
 */5 * * * *  cd /srv/rag-observability && .venv/bin/obs alerts
 # nightly golden-set run against the live index, stored as a point on the quality chart
 30 3 * * *   cd /srv/rag-eval-gate && .venv/bin/python -m eval.run --dataset golden/v3.jsonl --out /tmp/nightly.json && /srv/rag-observability/.venv/bin/obs eval-import /tmp/nightly.json
+# weekly review, monday morning
+0 8 * * 1    cd /srv/rag-observability && .venv/bin/obs weekly
