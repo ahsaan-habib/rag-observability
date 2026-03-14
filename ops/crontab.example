@@ -5,3 +5,5 @@ OBS_DB=/srv/rag-observability/obs.db
 30 3 * * *   cd /srv/rag-eval-gate && .venv/bin/python -m eval.run --dataset golden/v3.jsonl --out /tmp/nightly.json && /srv/rag-observability/.venv/bin/obs eval-import /tmp/nightly.json
 # weekly review, monday morning
 0 8 * * 1    cd /srv/rag-observability && .venv/bin/obs weekly
+# retention, nightly
+15 4 * * *   cd /srv/rag-observability && .venv/bin/obs retention

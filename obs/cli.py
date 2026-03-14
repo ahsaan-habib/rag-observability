@@ -42,6 +42,14 @@ def cmd_weekly(args) -> None:
     print(weekly(store.connect()))
 
 
+def cmd_retention(args) -> None:
+    from . import store
+    from .retention import prune
+
+    n = prune(store.connect(), dry_run=args.dry_run)
+    print(f"{'would prune' if args.dry_run else 'pruned'} {n} traces")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(prog="obs")
     sub = p.add_subparsers(required=True)
@@ -64,6 +72,10 @@ def main() -> None:
 
     w = sub.add_parser("weekly", help="the review list: quality and refusal trends")
     w.set_defaults(func=cmd_weekly)
+
+    rt = sub.add_parser("retention", help="sample old successful traces down to 20%")
+    rt.add_argument("--dry-run", action="store_true")
+    rt.set_defaults(func=cmd_retention)
 
     args = p.parse_args()
     args.func(args)

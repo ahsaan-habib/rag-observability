@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS requests (
     model         TEXT,
     prompt        TEXT,
     release       TEXT,
-    embed_fp      TEXT                    -- embedding model fingerprint at request time
+    embed_fp      TEXT,                   -- embedding model fingerprint at request time
+    trace_pruned  INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS requests_ts ON requests(ts);
 
