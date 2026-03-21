@@ -7,6 +7,7 @@ the current request lives in a contextvar so concurrent requests don't mix.
 from __future__ import annotations
 
 import contextvars
+import logging
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -26,6 +27,17 @@ from .retriever import TracedHybridRetriever, last_retrieval
 _current = contextvars.ContextVar("langfuse_trace", default=None)
 
 RELEASE = os.environ.get("OBS_RELEASE", "dev")
+log = logging.getLogger(__name__)
+
+# Instrumentation rots silently: refactor the retriever and a field just stops
+# being set, and nobody notices until the day it's needed. So the fields we
+# depend on are declared, and a span missing one is flagged on the trace.
+REQUIRED = {
+    "retrieve": {"candidates", "bm25_top", "dense_top", "overlap"},
+    "rerank": {"kept", "scores", "fused_top_kept"},
+    "generate": {"messages", "response", "input_tokens", "output_tokens"},
+    "gate": {"unsupported"},
+}
 
 
 class Tracer:
@@ -55,6 +67,10 @@ class Tracer:
                            # did rerank overrule retrieval's first choice?
                            fused_top_kept=fused_top in kept,
                            fused_top_rank=kept.index(fused_top) + 1 if fused_top in kept else None)
+        missing = REQUIRED.get(name, set()) - payload.keys()
+        if missing:
+            log.warning("span %s missing %s", name, sorted(missing))
+            trace.update(tags=["instrumentation-gap"], metadata={f"missing.{name}": sorted(missing)})
         if name == "generate":
             trace.generation(
                 name="generate", start_time=start, end_time=end,
