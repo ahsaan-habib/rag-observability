@@ -51,10 +51,19 @@ CREATE TABLE IF NOT EXISTS deploys (
 """
 
 
+# columns added after the first deploy; CREATE IF NOT EXISTS won't add them to an old db
+ADDED_COLUMNS = {"embed_fp": "TEXT", "trace_pruned": "INTEGER DEFAULT 0"}
+
+
 def connect() -> sqlite3.Connection:
     conn = sqlite3.connect(DB, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    have = {r["name"] for r in conn.execute("PRAGMA table_info(requests)")}
+    for col, ddl in ADDED_COLUMNS.items():
+        if col not in have:
+            conn.execute(f"ALTER TABLE requests ADD COLUMN {col} {ddl}")
+    conn.commit()
     return conn
 
 
