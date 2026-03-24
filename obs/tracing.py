@@ -120,5 +120,6 @@ class Tracer:
 
 
 def traced_pipeline(tracer: Tracer, **kw) -> RAGPipeline:
-    kw.setdefault("retriever", TracedHybridRetriever())
+    if "retriever" not in kw:    # not setdefault: that would open the index even when one is passed
+        kw["retriever"] = TracedHybridRetriever()
     return RAGPipeline(on_step=tracer.on_step, **kw)
